@@ -1,0 +1,10 @@
+{
+  "name": "LOJA MZ AI",
+  "short_name": "Lojas AI",
+  "description": "Gestão inteligente de lojas e vendas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f8",
+  "theme_color": "#c71920",
+  "icons": []
+}
