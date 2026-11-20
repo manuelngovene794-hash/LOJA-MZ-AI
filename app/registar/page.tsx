@@ -1,69 +1,57 @@
-
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
 export default function RegisterPage() {
-  const [storeName, setStoreName] = useState("");
-  const [phone, setPhone] = useState("+258");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [plan, setPlan] = useState("basic");
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
+
   const router = useRouter();
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setBusy(true);
     setError("");
     setSuccess("");
 
     if (password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
+      setBusy(false);
       return;
     }
 
     if (password !== confirmPassword) {
       setError("As senhas não coincidem.");
+      setBusy(false);
       return;
     }
-
-    if (!storeName.trim()) {
-      setError("Introduz o nome da tua loja.");
-      return;
-    }
-
-    setBusy(true);
 
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.auth.signUp({
-        phone: phone.trim(),
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
-        options: {
-          data: {
-            store_name: storeName.trim(),
-            requested_plan: plan
-          }
-        }
       });
 
       if (error) throw error;
 
-      setSuccess(
-        "Registo enviado com sucesso. Se a confirmação por telefone estiver ativa, segue as instruções recebidas."
-      );
-
-      setTimeout(() => {
-        router.push("/entrar");
-      }, 2500);
-
+      if (data.session) {
+        router.push("/painel");
+        router.refresh();
+      } else {
+        setSuccess(
+          "Conta criada! Verifica o teu email para confirmar o registo antes de entrar."
+        );
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -76,13 +64,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="container" style={{ maxWidth: 480, padding: "45px 0" }}>
-      <Link className="brand" href="/">LOJA MZ AI</Link>
+    <main className="container" style={{ maxWidth: 480, padding: "55px 0" }}>
+      <Link className="brand" href="/">
+        LOJA MZ AI
+      </Link>
 
       <section className="panel" style={{ marginTop: 24 }}>
         <h1>Criar a tua loja</h1>
+
         <p className="muted">
-          Regista-te para começares a gerir a tua loja online.
+          Cria a tua conta utilizando email e senha.
         </p>
 
         <form
@@ -90,40 +81,16 @@ export default function RegisterPage() {
           style={{ display: "grid", gap: 14, marginTop: 22 }}
         >
           <label>
-            Nome da loja
+            Email
             <input
               className="field"
-              value={storeName}
-              onChange={e => setStoreName(e.target.value)}
-              placeholder="Ex.: Minha Loja"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="exemplo@gmail.com"
+              autoComplete="email"
               required
             />
-          </label>
-
-          <label>
-            Número de telefone
-            <input
-              className="field"
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="+258 8XXXXXXXX"
-              autoComplete="tel"
-              required
-            />
-          </label>
-
-          <label>
-            Plano da loja
-            <select
-              className="field"
-              value={plan}
-              onChange={e => setPlan(e.target.value)}
-            >
-              <option value="basic">Básico — 200 MT/mês</option>
-              <option value="pro">Profissional — 500 MT/mês</option>
-              <option value="business">Empresarial — 1.000 MT/mês</option>
-            </select>
           </label>
 
           <label>
@@ -133,10 +100,11 @@ export default function RegisterPage() {
                 className="field"
                 type={show ? "text" : "password"}
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
                 required
               />
+
               <button
                 type="button"
                 className="btn btn-light"
@@ -153,26 +121,22 @@ export default function RegisterPage() {
               className="field"
               type={show ? "text" : "password"}
               value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
               required
             />
           </label>
 
-          {error && (
-            <p style={{ color: "#c71920" }}>{error}</p>
-          )}
+          {error && <p style={{ color: "#c71920" }}>{error}</p>}
 
-          {success && (
-            <p style={{ color: "#16803c" }}>{success}</p>
-          )}
+          {success && <p style={{ color: "green" }}>{success}</p>}
 
           <button className="btn btn-red" disabled={busy}>
-            {busy ? "A criar conta..." : "Criar conta e loja"}
+            {busy ? "A criar conta..." : "Criar conta"}
           </button>
         </form>
 
-        <p className="muted" style={{ marginTop: 20 }}>
+        <p className="muted">
           Já tens conta?{" "}
           <Link
             href="/entrar"
@@ -184,4 +148,5 @@ export default function RegisterPage() {
       </section>
     </main>
   );
-}
+    }
+    
