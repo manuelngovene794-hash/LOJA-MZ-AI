@@ -19,9 +19,15 @@ export default function RegisterPage() {
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (busy) return;
+
     setError("");
 
-    if (storeName.trim().length < 2) {
+    const cleanStoreName = storeName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (cleanStoreName.length < 2) {
       setError("O nome da loja deve ter pelo menos 2 caracteres.");
       return;
     }
@@ -41,13 +47,14 @@ export default function RegisterPage() {
     try {
       const supabase = createClient();
 
+      // Criar conta no Supabase
       const { data, error: authError } =
         await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           password,
           options: {
             data: {
-              store_name: storeName.trim(),
+              store_name: cleanStoreName,
             },
           },
         });
@@ -56,12 +63,25 @@ export default function RegisterPage() {
         throw authError;
       }
 
-      if (!data.session) {
+      if (!data.user) {
+        throw new Error("Não foi possível criar a conta.");
+      }
+
+      // Confirmar que existe uma sessão ativa
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      if (!data.session && !sessionData.session) {
         throw new Error(
-          "A conta foi criada, mas não existe sessão ativa. Verifica se a confirmação de email está desativada no Supabase."
+          "A conta foi criada, mas não foi possível iniciar a sessão. Verifica a configuração de confirmação de email no Supabase."
         );
       }
 
+      // Entrar diretamente no painel
       router.replace("/painel");
       router.refresh();
 
@@ -69,7 +89,7 @@ export default function RegisterPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Não foi possível criar a conta."
+          : "Não foi possível criar a conta. Tenta novamente."
       );
     } finally {
       setBusy(false);
@@ -144,7 +164,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 className="btn btn-light"
-                onClick={() => setShow(!show)}
+                onClick={() => setShow((v) => !v)}
               >
                 {show ? "Esconder" : "Mostrar"}
               </button>
@@ -191,4 +211,4 @@ export default function RegisterPage() {
     </main>
   );
       }
-        
+      
