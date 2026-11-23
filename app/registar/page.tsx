@@ -1,60 +1,66 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
 export default function RegisterPage() {
+  const [storeName, setStoreName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
 
   const router = useRouter();
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setBusy(true);
     setError("");
-    setSuccess("");
+
+    if (storeName.trim().length < 2) {
+      setError("O nome da loja deve ter pelo menos 2 caracteres.");
+      return;
+    }
 
     if (password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
-      setBusy(false);
       return;
     }
 
     if (password !== confirmPassword) {
       setError("As senhas não coincidem.");
-      setBusy(false);
       return;
     }
+
+    setBusy(true);
 
     try {
       const supabase = createClient();
 
       const { data, error } = await supabase.auth.signUp({
-  email: email.trim(),
-  password,
-  options: {
-    emailRedirectTo: `${window.location.origin}/auth/callback`,
-  },
-});
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            store_name: storeName.trim(),
+          },
+        },
+      });
 
       if (error) throw error;
 
-      if (data.session) {
-        router.push("/painel");
-        router.refresh();
-      } else {
-        setSuccess(
-          "Conta criada! Verifica o teu email para confirmar o registo antes de entrar."
+      if (!data.session) {
+        throw new Error(
+          "A conta foi criada, mas não foi iniciada uma sessão. Verifica se a confirmação de email está desativada no Supabase."
         );
       }
+
+      router.replace("/painel");
+      router.refresh();
+
     } catch (err) {
       setError(
         err instanceof Error
@@ -67,7 +73,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="container" style={{ maxWidth: 480, padding: "55px 0" }}>
+    <main
+      className="container"
+      style={{ maxWidth: 480, padding: "40px 0" }}
+    >
       <Link className="brand" href="/">
         LOJA MZ AI
       </Link>
@@ -76,13 +85,32 @@ export default function RegisterPage() {
         <h1>Criar a tua loja</h1>
 
         <p className="muted">
-          Cria a tua conta utilizando email e senha.
+          Regista a tua loja e começa a gerir o teu negócio.
         </p>
 
         <form
           onSubmit={submit}
-          style={{ display: "grid", gap: 14, marginTop: 22 }}
+          style={{
+            display: "grid",
+            gap: 16,
+            marginTop: 22,
+          }}
         >
+          <label>
+            Nome da loja
+            <input
+              className="field"
+              type="text"
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              placeholder="Ex.: Minha Loja MZ"
+              minLength={2}
+              maxLength={80}
+              autoComplete="organization"
+              required
+            />
+          </label>
+
           <label>
             Email
             <input
@@ -105,6 +133,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
+                minLength={6}
                 required
               />
 
@@ -130,12 +159,18 @@ export default function RegisterPage() {
             />
           </label>
 
-          {error && <p style={{ color: "#c71920" }}>{error}</p>}
+          {error && (
+            <p role="alert" style={{ color: "#c71920" }}>
+              {error}
+            </p>
+          )}
 
-          {success && <p style={{ color: "green" }}>{success}</p>}
-
-          <button className="btn btn-red" disabled={busy}>
-            {busy ? "A criar conta..." : "Criar conta"}
+          <button
+            className="btn btn-red"
+            disabled={busy}
+            type="submit"
+          >
+            {busy ? "A criar conta..." : "Criar a minha loja"}
           </button>
         </form>
 
@@ -151,5 +186,5 @@ export default function RegisterPage() {
       </section>
     </main>
   );
-    }
-    
+        }
+      
