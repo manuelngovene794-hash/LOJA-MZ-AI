@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
@@ -11,28 +12,40 @@ export default function LoginPage() {
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
   const router = useRouter();
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (busy) return;
+
     setBusy(true);
     setError("");
 
     try {
       const supabase = createClient();
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password
-      });
+      const { data, error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
 
-      if (error) throw error;
+      if (loginError) throw loginError;
 
-      router.push("/painel");
+      if (!data.session) {
+        throw new Error("Não foi possível iniciar a sessão.");
+      }
+
+      router.replace("/painel");
       router.refresh();
+
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Não foi possível entrar."
+        err instanceof Error
+          ? err.message
+          : "Não foi possível entrar. Verifica os teus dados."
       );
     } finally {
       setBusy(false);
@@ -40,24 +53,36 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="container" style={{maxWidth:480,padding:"55px 0"}}>
-      <Link className="brand" href="/">LOJA MZ AI</Link>
+    <main
+      className="container"
+      style={{ maxWidth: 480, padding: "55px 0" }}
+    >
+      <Link className="brand" href="/">
+        LOJA MZ AI
+      </Link>
 
-      <section className="panel" style={{marginTop:24}}>
+      <section className="panel" style={{ marginTop: 24 }}>
         <h1>Entrar na tua loja</h1>
 
         <p className="muted">
           Utiliza o teu email e a tua senha.
         </p>
 
-        <form onSubmit={submit} style={{display:"grid",gap:14,marginTop:22}}>
+        <form
+          onSubmit={submit}
+          style={{
+            display: "grid",
+            gap: 14,
+            marginTop: 22,
+          }}
+        >
           <label>
             Email
             <input
               className="field"
               type="email"
               value={email}
-              onChange={e=>setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="exemplo@gmail.com"
               autoComplete="email"
               required
@@ -66,12 +91,12 @@ export default function LoginPage() {
 
           <label>
             Senha
-            <div style={{display:"flex",gap:8}}>
+            <div style={{ display: "flex", gap: 8 }}>
               <input
                 className="field"
-                type={show?"text":"password"}
+                type={show ? "text" : "password"}
                 value={password}
-                onChange={e=>setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
               />
@@ -79,32 +104,38 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="btn btn-light"
-                onClick={()=>setShow(!show)}
+                onClick={() => setShow((v) => !v)}
               >
-                {show?"Esconder":"Mostrar"}
+                {show ? "Esconder" : "Mostrar"}
               </button>
             </div>
           </label>
 
-          {error && <p style={{color:"#c71920"}}>{error}</p>}
+          {error && (
+            <p role="alert" style={{ color: "#c71920" }}>
+              {error}
+            </p>
+          )}
 
-          <button className="btn btn-red" disabled={busy}>
-            {busy?"A entrar...":"Entrar"}
+          <button
+            className="btn btn-red"
+            type="submit"
+            disabled={busy}
+          >
+            {busy ? "A entrar..." : "Entrar"}
           </button>
         </form>
 
         <p className="muted">
           Ainda não tens loja?{" "}
-          <Link href="/registar" style={{color:"#c71920",fontWeight:700}}>
+          <Link
+            href="/registar"
+            style={{ color: "#c71920", fontWeight: 700 }}
+          >
             Criar conta
           </Link>
-        </p>
-
-        <p className="muted" style={{fontSize:12}}>
-          A recuperação de senha será disponibilizada através de recuperação segura por email ou assistência administrativa, após configurar o serviço de autenticação.
         </p>
       </section>
     </main>
   );
-        }
-        
+                  }
