@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -40,21 +41,24 @@ export default function RegisterPage() {
     try {
       const supabase = createClient();
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            store_name: storeName.trim(),
+      const { data, error: authError } =
+        await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: {
+              store_name: storeName.trim(),
+            },
           },
-        },
-      });
+        });
 
-      if (error) throw error;
+      if (authError) {
+        throw authError;
+      }
 
       if (!data.session) {
         throw new Error(
-          "A conta foi criada, mas não foi iniciada uma sessão. Verifica se a confirmação de email está desativada no Supabase."
+          "A conta foi criada, mas não existe sessão ativa. Verifica se a confirmação de email está desativada no Supabase."
         );
       }
 
@@ -186,5 +190,5 @@ export default function RegisterPage() {
       </section>
     </main>
   );
-        }
-      
+      }
+        
